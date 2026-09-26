@@ -1,187 +1,53 @@
-name: Build APK
+name: Build App Chat
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+    paths: [ 'chat-app/**' ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
+        with: { distribution: 'temurin', java-version: '17' }
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          cache: true
+        with: { flutter-version: '3.19.0', channel: 'stable', cache: true }
 
-      # ⭐ TẠO PROJECT MỚI HOÀN TOÀN (không copy từ repo)
-      - name: Tạo project Flutter mới
+      - name: Tạo project Chat
         run: |
-          flutter create --org com.example --project-name chat_app chat_app
-          cd chat_app
-          
-          # Ghi main.dart
-          cat > lib/main.dart << 'EOF'
-          import 'package:flutter/material.dart';
-
-          void main() => runApp(const MyApp());
-
-          class MyApp extends StatelessWidget {
-            const MyApp({super.key});
-            @override
-            Widget build(BuildContext context) {
-              return MaterialApp(
-                title: 'Chat App',
-                debugShowCheckedModeBanner: false,
-                theme: ThemeData(primarySwatch: Colors.indigo, useMaterial3: true),
-                home: const ChatScreen(),
-              );
-            }
-          }
-
-          class ChatScreen extends StatefulWidget {
-            const ChatScreen({super.key});
-            @override
-            State<ChatScreen> createState() => _ChatScreenState();
-          }
-
-          class _ChatScreenState extends State<ChatScreen> {
-            final _controller = TextEditingController();
-            final List<Map<String, String>> _messages = [
-              {'user': 'Bot', 'text': 'Xin chào! 👋 Nhập tin nhắn để bắt đầu.'},
-            ];
-
-            void _send() {
-              if (_controller.text.trim().isEmpty) return;
-              setState(() {
-                _messages.add({'user': 'Bạn', 'text': _controller.text});
-                _messages.add({'user': 'Bot', 'text': 'Đã nhận: ${_controller.text}'});
-              });
-              _controller.clear();
-            }
-
-            @override
-            Widget build(BuildContext context) {
-              return Scaffold(
-                appBar: AppBar(
-                  title: const Text('💬 Chat App'),
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
-                body: Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(12),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) {
-                          final m = _messages[i];
-                          final isMe = m['user'] == 'Bạn';
-                          return Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe ? Colors.indigo : Colors.grey[200],
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: isMe
-                                    ? CrossAxisAlignment.end
-                                    : CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    m['user']!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: isMe ? Colors.white70 : Colors.black54,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    m['text']!,
-                                    style: TextStyle(
-                                      color: isMe ? Colors.white : Colors.black87,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _controller,
-                                decoration: InputDecoration(
-                                  hintText: 'Nhập tin nhắn...',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                ),
-                                onSubmitted: (_) => _send(),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.indigo,
-                              child: IconButton(
-                                icon: const Icon(Icons.send, color: Colors.white),
-                                onPressed: _send,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
+          flutter create --org com.example --project-name chat_app chat_app_build
+          cd chat_app_build
+          cat > pubspec.yaml << 'EOF'
+          name: chat_app
+          description: Chat App
+          publish_to: 'none'
+          version: 1.0.0+1
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+          dependencies:
+            flutter: { sdk: flutter }
+            http: ^1.2.0
+          flutter:
+            uses-material-design: true
           EOF
-          
-          # ⭐ KIỂM TRA AndroidX (in ra log để chắc chắn)
-          echo "===================="
-          echo "KIỂM TRA ANDROIDX"
-          echo "===================="
-          cat android/gradle.properties
-          echo "===================="
+          # ⭐ Dán code app Chat ở trên vào đây
+          cat > lib/main.dart << 'DART_EOF'
+          [DÁN CODE APP CHAT]
+          DART_EOF
+          sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' android/app/src/main/AndroidManifest.xml
 
-      # ⭐ BUILD
       - name: Build APK
         run: |
-          cd chat_app
+          cd chat_app_build
           flutter pub get
           flutter build apk --release
 
-      # ⭐ UPLOAD
-      - name: Upload APK
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: chat-app-apk
-          path: chat_app/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
+          name: app-chat-apk
+          path: chat_app_build/build/app/outputs/flutter-apk/app-release.apk
