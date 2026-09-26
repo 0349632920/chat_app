@@ -9,9 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -25,34 +22,13 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # ⭐ BƯỚC 1: XÓA android/ cũ và tạo mới hoàn toàn bằng flutter create
-      - name: Xóa android cũ và tạo lại
+      # ⭐ TẠO PROJECT MỚI HOÀN TOÀN (không copy từ repo)
+      - name: Tạo project Flutter mới
         run: |
-          rm -rf android
-          flutter create --org com.example --project-name chat_app --platforms android temp_app
-          cp -r temp_app/android .
-          rm -rf temp_app
-          echo "=== android/gradle.properties ==="
-          cat android/gradle.properties
-
-      # ⭐ BƯỚC 2: Đảm bảo AndroidX được bật (double-check)
-      - name: Đảm bảo AndroidX được bật
-        run: |
-          cd android
-          touch gradle.properties
-          # Xóa dòng cũ nếu có (tránh trùng lặp)
-          sed -i '/android.useAndroidX/d' gradle.properties
-          sed -i '/android.enableJetifier/d' gradle.properties
-          # Thêm dòng mới
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-          echo "=== Kết quả cuối ==="
-          cat gradle.properties
-
-      # ⭐ BƯỚC 3: Tạo folder lib + ghi main.dart
-      - name: Tạo lib/main.dart
-        run: |
-          mkdir -p lib
+          flutter create --org com.example --project-name chat_app chat_app
+          cd chat_app
+          
+          # Ghi main.dart
           cat > lib/main.dart << 'EOF'
           import 'package:flutter/material.dart';
 
@@ -80,7 +56,7 @@ jobs:
           class _ChatScreenState extends State<ChatScreen> {
             final _controller = TextEditingController();
             final List<Map<String, String>> _messages = [
-              {'user': 'Bot', 'text': 'Xin chào! 👋'},
+              {'user': 'Bot', 'text': 'Xin chào! 👋 Nhập tin nhắn để bắt đầu.'},
             ];
 
             void _send() {
@@ -187,46 +163,25 @@ jobs:
             }
           }
           EOF
+          
+          # ⭐ KIỂM TRA AndroidX (in ra log để chắc chắn)
+          echo "===================="
+          echo "KIỂM TRA ANDROIDX"
+          echo "===================="
+          cat android/gradle.properties
+          echo "===================="
 
-      # ⭐ BƯỚC 4: Tạo pubspec.yaml
-      - name: Tạo pubspec.yaml
-        run: |
-          cat > pubspec.yaml << 'EOF'
-          name: chat_app
-          description: Simple chat app
-          publish_to: 'none'
-          version: 1.0.0+1
-
-          environment:
-            sdk: '>=3.0.0 <4.0.0'
-
-          dependencies:
-            flutter:
-              sdk: flutter
-            cupertino_icons: ^1.0.6
-
-          dev_dependencies:
-            flutter_test:
-              sdk: flutter
-            flutter_lints: ^3.0.0
-
-          flutter:
-            uses-material-design: true
-          EOF
-
-      # ⭐ BƯỚC 5: Clean và build
-      - name: Flutter clean
-        run: flutter clean
-
-      - name: Get dependencies
-        run: flutter pub get
-
+      # ⭐ BUILD
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          cd chat_app
+          flutter pub get
+          flutter build apk --release
 
+      # ⭐ UPLOAD
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: chat-app-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: chat_app/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
