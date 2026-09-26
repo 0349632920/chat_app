@@ -25,8 +25,198 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
+      # ⭐ BƯỚC 1: XÓA android/ cũ và tạo mới hoàn toàn bằng flutter create
+      - name: Xóa android cũ và tạo lại
+        run: |
+          rm -rf android
+          flutter create --org com.example --project-name chat_app --platforms android temp_app
+          cp -r temp_app/android .
+          rm -rf temp_app
+          echo "=== android/gradle.properties ==="
+          cat android/gradle.properties
+
+      # ⭐ BƯỚC 2: Đảm bảo AndroidX được bật (double-check)
+      - name: Đảm bảo AndroidX được bật
+        run: |
+          cd android
+          touch gradle.properties
+          # Xóa dòng cũ nếu có (tránh trùng lặp)
+          sed -i '/android.useAndroidX/d' gradle.properties
+          sed -i '/android.enableJetifier/d' gradle.properties
+          # Thêm dòng mới
+          echo "android.useAndroidX=true" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          echo "=== Kết quả cuối ==="
+          cat gradle.properties
+
+      # ⭐ BƯỚC 3: Tạo folder lib + ghi main.dart
+      - name: Tạo lib/main.dart
+        run: |
+          mkdir -p lib
+          cat > lib/main.dart << 'EOF'
+          import 'package:flutter/material.dart';
+
+          void main() => runApp(const MyApp());
+
+          class MyApp extends StatelessWidget {
+            const MyApp({super.key});
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                title: 'Chat App',
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(primarySwatch: Colors.indigo, useMaterial3: true),
+                home: const ChatScreen(),
+              );
+            }
+          }
+
+          class ChatScreen extends StatefulWidget {
+            const ChatScreen({super.key});
+            @override
+            State<ChatScreen> createState() => _ChatScreenState();
+          }
+
+          class _ChatScreenState extends State<ChatScreen> {
+            final _controller = TextEditingController();
+            final List<Map<String, String>> _messages = [
+              {'user': 'Bot', 'text': 'Xin chào! 👋'},
+            ];
+
+            void _send() {
+              if (_controller.text.trim().isEmpty) return;
+              setState(() {
+                _messages.add({'user': 'Bạn', 'text': _controller.text});
+                _messages.add({'user': 'Bot', 'text': 'Đã nhận: ${_controller.text}'});
+              });
+              _controller.clear();
+            }
+
+            @override
+            Widget build(BuildContext context) {
+              return Scaffold(
+                appBar: AppBar(
+                  title: const Text('💬 Chat App'),
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                ),
+                body: Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _messages.length,
+                        itemBuilder: (_, i) {
+                          final m = _messages[i];
+                          final isMe = m['user'] == 'Bạn';
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.indigo : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: isMe
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    m['user']!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: isMe ? Colors.white70 : Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    m['text']!,
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white : Colors.black87,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _controller,
+                                decoration: InputDecoration(
+                                  hintText: 'Nhập tin nhắn...',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                ),
+                                onSubmitted: (_) => _send(),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CircleAvatar(
+                              radius: 24,
+                              backgroundColor: Colors.indigo,
+                              child: IconButton(
+                                icon: const Icon(Icons.send, color: Colors.white),
+                                onPressed: _send,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+          EOF
+
+      # ⭐ BƯỚC 4: Tạo pubspec.yaml
+      - name: Tạo pubspec.yaml
+        run: |
+          cat > pubspec.yaml << 'EOF'
+          name: chat_app
+          description: Simple chat app
+          publish_to: 'none'
+          version: 1.0.0+1
+
+          environment:
+            sdk: '>=3.0.0 <4.0.0'
+
+          dependencies:
+            flutter:
+              sdk: flutter
+            cupertino_icons: ^1.0.6
+
+          dev_dependencies:
+            flutter_test:
+              sdk: flutter
+            flutter_lints: ^3.0.0
+
+          flutter:
+            uses-material-design: true
+          EOF
+
+      # ⭐ BƯỚC 5: Clean và build
+      - name: Flutter clean
+        run: flutter clean
 
       - name: Get dependencies
         run: flutter pub get
