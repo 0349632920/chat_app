@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-// ⭐ CẤU HÌNH
-const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.firebaseio.com';
-const String EMAILJS_SERVICE_ID = 'service_xxxxxxx';
-const String EMAILJS_TEMPLATE_ID = 'template_xxxxxxx';
-const String EMAILJS_PUBLIC_KEY = 'xxxxxxxxxxxxxxx';
+// ⭐ CẤU HÌNH — ĐÃ ĐIỀN ĐẦY ĐỦ
+const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.asia-southeast1.firebasedatabase.app';
+const String EMAILJS_SERVICE_ID = 'service_xd4p0og';
+const String EMAILJS_TEMPLATE_ID = 'template_e75vjj7';
+const String EMAILJS_PUBLIC_KEY = '_ARGVipfVQPmHkUTt';
 const String EMAIL_NHAN = 'hung.luongtien0707@gmail.com';
 
 void main() => runApp(const MyApp());
@@ -33,6 +33,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
   final _nameController = TextEditingController(text: 'Khách');
+  final _scrollController = ScrollController();
   final List<Map<String, String>> _messages = [
     {'user': 'Bot', 'text': 'Gõ tin nhắn để gửi đến app "Nhận tin nhắn".'},
   ];
@@ -42,7 +43,6 @@ class _ChatScreenState extends State<ChatScreen> {
     return '${n.hour}:${n.minute.toString().padLeft(2, '0')}';
   }
 
-  // ⭐ GỬI LÊN FIREBASE
   Future<void> _guiFirebase(String ten, String noiDung) async {
     try {
       final r = await http.post(
@@ -55,16 +55,15 @@ class _ChatScreenState extends State<ChatScreen> {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         }),
       );
-      print(r.statusCode == 200 ? '✅ Đã lưu Firebase' : '❌ Lỗi Firebase: ${r.body}');
+      print(r.statusCode == 200 ? 'Da luu Firebase' : 'Loi Firebase: ${r.body}');
     } catch (e) {
-      print('❌ $e');
+      print('Loi: $e');
     }
   }
 
-  // ⭐ GỬI EMAIL
   Future<void> _guiEmail(String ten, String noiDung) async {
     try {
-      await http.post(
+      final r = await http.post(
         Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
         headers: {'Content-Type': 'application/json', 'origin': 'http://localhost'},
         body: jsonEncode({
@@ -79,39 +78,51 @@ class _ChatScreenState extends State<ChatScreen> {
           },
         }),
       );
-      print('✅ Đã gửi email');
+      print(r.statusCode == 200 ? 'Da gui email' : 'Loi email: ${r.body}');
     } catch (e) {
-      print('❌ $e');
+      print('Loi: $e');
     }
   }
 
   void _send() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    final ten = _nameController.text.trim().isEmpty ? 'Khách' : _nameController.text.trim();
+    final ten = _nameController.text.trim().isEmpty ? 'Khach' : _nameController.text.trim();
 
     setState(() {
       _messages.add({'user': ten, 'text': text});
     });
 
-    // ⭐ GỬI LÊN FIREBASE + EMAIL
     _guiFirebase(ten, text);
     _guiEmail(ten, text);
 
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
-        _messages.add({'user': 'Bot', 'text': '✅ Đã gửi đến app "Nhận tin nhắn"'});
+        _messages.add({'user': 'Bot', 'text': 'Da gui den app "Nhan tin nhan"'});
       });
+      _scrollToBottom();
     });
 
     _controller.clear();
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('💬 Chat (Người gửi)'),
+        title: const Text('Chat (Nguoi gui)'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
@@ -123,7 +134,7 @@ class _ChatScreenState extends State<ChatScreen> {
             child: TextField(
               controller: _nameController,
               decoration: const InputDecoration(
-                labelText: 'Tên của bạn',
+                labelText: 'Ten cua ban',
                 border: OutlineInputBorder(),
                 isDense: true,
                 contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -132,6 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(12),
               itemCount: _messages.length,
               itemBuilder: (_, i) {
@@ -177,7 +189,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: TextField(
                       controller: _controller,
                       decoration: InputDecoration(
-                        hintText: 'Nhập tin nhắn...',
+                        hintText: 'Nhap tin nhan...',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
