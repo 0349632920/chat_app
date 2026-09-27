@@ -1,33 +1,30 @@
-name: Build 2 Apps
+name: Build App Chat
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
-  build-chat:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
-          channel: 'stable'
-          cache: true
+          channel: stable
 
-      - name: Tạo project Chat
-        run: flutter create --org com.example --project-name chat_app chat_app_build
+      - name: Tao project
+        run: flutter create --org com.example --project-name chat_app chat_build
 
-      - name: Ghi pubspec Chat
+      - name: Ghi pubspec
         run: |
-          cd chat_app_build
+          cd chat_build
           printf '%s\n' \
             "name: chat_app" \
             "description: Chat App" \
@@ -50,10 +47,10 @@ jobs:
             "  uses-material-design: true" \
             > pubspec.yaml
 
-      - name: Ghi main.dart Chat
+      - name: Ghi main.dart
         run: |
-          cd chat_app_build
-          cat > lib/main.dart << 'DARTEND'
+          cd chat_build
+          cat > lib/main.dart << 'ENDDART'
           import 'package:flutter/material.dart';
           import 'package:http/http.dart' as http;
           import 'dart:convert';
@@ -131,9 +128,7 @@ jobs:
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode(payload),
                 );
-              } catch (e) {
-                print('LOI: $e');
-              }
+              } catch (e) { print('LOI: $e'); }
             }
 
             Future<void> _guiEmail(Message msg) async {
@@ -157,9 +152,7 @@ jobs:
                     },
                   }),
                 );
-              } catch (e) {
-                print('LOI EMAIL: $e');
-              }
+              } catch (e) { print('LOI EMAIL: $e'); }
             }
 
             void _send() {
@@ -228,14 +221,7 @@ jobs:
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.reply, size: 12, color: isMe ? Colors.amber : Colors.indigo),
-                                        const SizedBox(width: 4),
-                                        Text(m.replyToUser ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.amber : Colors.indigo)),
-                                      ],
-                                    ),
+                                    Text(m.replyToUser ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.amber : Colors.indigo)),
                                     const SizedBox(height: 2),
                                     Text(m.replyToText ?? '', maxLines: 2, overflow: TextOverflow.ellipsis,
                                         style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: isMe ? Colors.white70 : Colors.black54)),
@@ -299,11 +285,7 @@ jobs:
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(children: [
-                                    const Icon(Icons.reply, size: 14, color: Colors.indigo),
-                                    const SizedBox(width: 4),
-                                    Text('Dang tra loi ${_replyingTo!.user}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
-                                  ]),
+                                  Text('Dang tra loi ${_replyingTo!.user}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
                                   const SizedBox(height: 2),
                                   Text(_replyingTo!.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black54)),
                                 ],
@@ -344,145 +326,21 @@ jobs:
               );
             }
           }
-          DARTEND
+          ENDDART
 
-      - name: Thêm quyền Internet Chat
+      - name: Quyen Internet
         run: |
-          cd chat_app_build
+          cd chat_build
           sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' android/app/src/main/AndroidManifest.xml
 
-      - name: Build APK Chat
+      - name: Build APK
         run: |
-          cd chat_app_build
+          cd chat_build
           flutter pub get
           flutter build apk --release
 
-      - name: Upload APK Chat
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: app-chat-apk
-          path: chat_app_build/build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 30
-
-  build-receive:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.0'
-          channel: 'stable'
-          cache: true
-
-      - name: Tạo project Nhận
-        run: flutter create --org com.example --project-name receive_app receive_app_build
-
-      - name: Ghi pubspec Nhận
-        run: |
-          cd receive_app_build
-          printf '%s\n' \
-            "name: receive_app" \
-            "description: Receive Messages" \
-            "publish_to: 'none'" \
-            "version: 1.0.0+1" \
-            "" \
-            "environment:" \
-            "  sdk: '>=3.0.0 <4.0.0'" \
-            "" \
-            "dependencies:" \
-            "  flutter:" \
-            "    sdk: flutter" \
-            "  http: ^1.2.0" \
-            "" \
-            "dev_dependencies:" \
-            "  flutter_test:" \
-            "    sdk: flutter" \
-            "" \
-            "flutter:" \
-            "  uses-material-design: true" \
-            > pubspec.yaml
-
-      - name: Ghi main.dart Nhận
-        run: |
-          cd receive_app_build
-          cat > lib/main.dart << 'DARTEND'
-          import 'package:flutter/material.dart';
-          import 'package:http/http.dart' as http;
-          import 'dart:convert';
-          import 'dart:async';
-
-          const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.asia-southeast1.firebasedatabase.app';
-          const String EMAILJS_SERVICE_ID = 'service_xd4p0og';
-          const String EMAILJS_TEMPLATE_ID = 'template_e75vjj7';
-          const String EMAILJS_PUBLIC_KEY = '_ARGVipfVQPmHkUTt';
-          const String EMAIL_NHAN = 'hung.luongtien0707@gmail.com';
-
-          void main() => runApp(const MyApp());
-
-          class MyApp extends StatelessWidget {
-            const MyApp({super.key});
-            @override
-            Widget build(BuildContext context) {
-              return MaterialApp(
-                title: 'Nhan tin nhan',
-                debugShowCheckedModeBanner: false,
-                theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
-                home: const ReceiveScreen(),
-              );
-            }
-          }
-
-          class ReceiveScreen extends StatefulWidget {
-            const ReceiveScreen({super.key});
-            @override
-            State<ReceiveScreen> createState() => _ReceiveScreenState();
-          }
-
-          class _ReceiveScreenState extends State<ReceiveScreen> {
-            List<Map<String, dynamic>> _messages = [];
-            Timer? _timer;
-            bool _loading = true;
-            int _lastCount = 0;
-            String _lastError = '';
-            final _replyController = TextEditingController();
-            final _scrollController = ScrollController();
-            Map<String, dynamic>? _replyingTo;
-            bool _sending = false;
-
-            @override
-            void initState() {
-              super.initState();
-              _loadMessages();
-              _timer = Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages());
-            }
-
-            @override
-            void dispose() {
-              _timer?.cancel();
-              _replyController.dispose();
-              _scrollController.dispose();
-              super.dispose();
-            }
-
-            String _now() {
-              final n = DateTime.now();
-              return '${n.hour}:${n.minute.toString().padLeft(2, '0')}';
-            }
-
-            Future<void> _loadMessages() async {
-              try {
-                final r = await http.get(Uri.parse('$FIREBASE_URL/messages.json'));
-                if (r.statusCode == 200) {
-                  final data = jsonDecode(r.body);
-                  if (data == null) {
-                    setState(() { _messages = []; _loading = false; _lastError = ''; });
-                    return;
-                  }
-                  final Map<String, dynamic> map = Map<String, dynamic>.from(data);
-                  final list = map.entries.map((e) => {...Map<String, dynamic>.from(e.value), 'id'
+          path: chat_build/build/app/outputs/flutter-apk/app-release.apk
