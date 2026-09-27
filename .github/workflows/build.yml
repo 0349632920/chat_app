@@ -32,20 +32,16 @@ jobs:
           description: Chat App
           publish_to: 'none'
           version: 1.0.0+1
-
           environment:
             sdk: '>=3.0.0 <4.0.0'
-
           dependencies:
             flutter:
               sdk: flutter
             http: ^1.2.0
-
           dev_dependencies:
             flutter_test:
               sdk: flutter
             flutter_lints: ^3.0.0
-
           flutter:
             uses-material-design: true
           EOF
@@ -55,10 +51,10 @@ jobs:
           import 'package:http/http.dart' as http;
           import 'dart:convert';
 
-          const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.firebaseio.com';
-          const String EMAILJS_SERVICE_ID = 'service_xxxxxxx';
-          const String EMAILJS_TEMPLATE_ID = 'template_xxxxxxx';
-          const String EMAILJS_PUBLIC_KEY = 'xxxxxxxxxxxxxxx';
+          const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.asia-southeast1.firebasedatabase.app';
+          const String EMAILJS_SERVICE_ID = 'service_xd4p0og';
+          const String EMAILJS_TEMPLATE_ID = 'template_e75vjj7';
+          const String EMAILJS_PUBLIC_KEY = '_ARGVipfVQPmHkUTt';
           const String EMAIL_NHAN = 'hung.luongtien0707@gmail.com';
 
           void main() => runApp(const MyApp());
@@ -76,26 +72,6 @@ jobs:
             }
           }
 
-          class Message {
-            final String id;
-            final String user;
-            final String text;
-            final String time;
-            final String? replyToUser;
-            final String? replyToText;
-
-            Message({
-              required this.id,
-              required this.user,
-              required this.text,
-              required this.time,
-              this.replyToUser,
-              this.replyToText,
-            });
-
-            bool get isReply => replyToText != null;
-          }
-
           class ChatScreen extends StatefulWidget {
             const ChatScreen({super.key});
             @override
@@ -104,54 +80,41 @@ jobs:
 
           class _ChatScreenState extends State<ChatScreen> {
             final _controller = TextEditingController();
-            final _nameController = TextEditingController(text: 'Khách');
+            final _nameController = TextEditingController(text: 'Khach');
             final _scrollController = ScrollController();
-            final List<Message> _messages = [];
-            Message? _replyingTo;
-
-            @override
-            void initState() {
-              super.initState();
-              _messages.add(Message(
-                id: '0',
-                user: 'Bot',
-                text: 'Xin chào! Giữ vào tin nhắn để trả lời.',
-                time: _now(),
-              ));
-            }
+            final List<Map<String, String>> _messages = [
+              {'user': 'Bot', 'text': 'Go tin nhan de gui den app Nhan tin nhan.'},
+            ];
 
             String _now() {
               final n = DateTime.now();
               return '${n.hour}:${n.minute.toString().padLeft(2, '0')}';
             }
 
-            Future<void> _guiFirebase(String ten, String noiDung, Message? reply) async {
-              String noiDungFull = noiDung;
-              if (reply != null && reply.isReply) {
-                noiDungFull = 'Reply "${reply.replyToText}": $noiDung';
-              } else if (reply != null) {
-                noiDungFull = 'Reply "${reply.text}": $noiDung';
-              }
+            Future<void> _guiFirebase(String ten, String noiDung) async {
               try {
-                await http.post(
-                  Uri.parse('$FIREBASE_URL/messages.json'),
+                final url = '$FIREBASE_URL/messages.json';
+                print('GUI DEN: $url');
+                final r = await http.post(
+                  Uri.parse(url),
                   headers: {'Content-Type': 'application/json'},
                   body: jsonEncode({
                     'user': ten,
-                    'text': noiDungFull,
+                    'text': noiDung,
                     'time': '${_now()} ${DateTime.now().day}/${DateTime.now().month}',
                     'timestamp': DateTime.now().millisecondsSinceEpoch,
                   }),
                 );
-                print('Da luu Firebase');
+                print('STATUS: ${r.statusCode}');
+                print('BODY: ${r.body}');
               } catch (e) {
-                print('Loi Firebase: $e');
+                print('EXCEPTION: $e');
               }
             }
 
             Future<void> _guiEmail(String ten, String noiDung) async {
               try {
-                await http.post(
+                final r = await http.post(
                   Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
                   headers: {'Content-Type': 'application/json', 'origin': 'http://localhost'},
                   body: jsonEncode({
@@ -166,9 +129,9 @@ jobs:
                     },
                   }),
                 );
-                print('Da gui email');
+                print(r.statusCode == 200 ? 'DA GUI EMAIL' : 'LOI EMAIL: ${r.body}');
               } catch (e) {
-                print('Loi email: $e');
+                print('LOI EMAIL: $e');
               }
             }
 
@@ -176,38 +139,22 @@ jobs:
               final text = _controller.text.trim();
               if (text.isEmpty) return;
               final ten = _nameController.text.trim().isEmpty ? 'Khach' : _nameController.text.trim();
-              final replySnapshot = _replyingTo;
-
-              final msg = Message(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                user: ten,
-                text: text,
-                time: _now(),
-                replyToUser: replySnapshot?.user,
-                replyToText: replySnapshot?.text,
-              );
 
               setState(() {
-                _messages.add(msg);
-                _replyingTo = null;
+                _messages.add({'user': ten, 'text': text});
               });
 
-              _guiFirebase(ten, text, replySnapshot);
+              _guiFirebase(ten, text);
               _guiEmail(ten, text);
-              _controller.clear();
-              _scrollToBottom();
 
               Future.delayed(const Duration(milliseconds: 500), () {
                 setState(() {
-                  _messages.add(Message(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    user: 'Bot',
-                    text: 'Da gui den app Nhan tin nhan',
-                    time: _now(),
-                  ));
+                  _messages.add({'user': 'Bot', 'text': 'Da gui den app Nhan tin nhan'});
                 });
                 _scrollToBottom();
               });
+
+              _controller.clear();
             }
 
             void _scrollToBottom() {
@@ -222,89 +169,14 @@ jobs:
               });
             }
 
-            void _showMessageMenu(Message m) {
-              showModalBottomSheet(
-                context: context,
-                builder: (_) => SafeArea(
-                  child: Wrap(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.reply, color: Colors.indigo),
-                        title: const Text('Tra loi'),
-                        onTap: () {
-                          Navigator.pop(context);
-                          setState(() => _replyingTo = m);
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.close, color: Colors.grey),
-                        title: const Text('Dong'),
-                        onTap: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            Widget _buildMessage(Message m) {
-              final isMe = m.user != 'Bot';
-              return Align(
-                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                child: GestureDetector(
-                  onLongPress: () => _showMessageMenu(m),
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                    decoration: BoxDecoration(
-                      color: isMe ? Colors.indigo : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                      children: [
-                        Text(m.user, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.white70 : Colors.black54)),
-                        const SizedBox(height: 4),
-                        if (m.isReply)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isMe ? Colors.white24 : Colors.black12,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border(left: BorderSide(color: isMe ? Colors.amber : Colors.indigo, width: 3)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.reply, size: 12, color: isMe ? Colors.amber : Colors.indigo),
-                                    const SizedBox(width: 4),
-                                    Text(m.replyToUser ?? '', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isMe ? Colors.amber : Colors.indigo)),
-                                  ],
-                                ),
-                                const SizedBox(height: 2),
-                                Text(m.replyToText ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: isMe ? Colors.white70 : Colors.black54)),
-                              ],
-                            ),
-                          ),
-                        Text(m.text, style: TextStyle(color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
-                        const SizedBox(height: 4),
-                        Text(m.time, style: TextStyle(fontSize: 10, color: isMe ? Colors.white60 : Colors.black38)),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }
-
             @override
             Widget build(BuildContext context) {
               return Scaffold(
-                appBar: AppBar(title: const Text('Chat (Nguoi gui)'), backgroundColor: Colors.indigo, foregroundColor: Colors.white),
+                appBar: AppBar(
+                  title: const Text('Chat (Nguoi gui)'),
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                ),
                 body: Column(
                   children: [
                     Container(
@@ -312,7 +184,12 @@ jobs:
                       color: Colors.indigo.shade50,
                       child: TextField(
                         controller: _nameController,
-                        decoration: const InputDecoration(labelText: 'Ten cua ban', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10)),
+                        decoration: const InputDecoration(
+                          labelText: 'Ten cua ban',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
                       ),
                     ),
                     Expanded(
@@ -320,36 +197,41 @@ jobs:
                         controller: _scrollController,
                         padding: const EdgeInsets.all(12),
                         itemCount: _messages.length,
-                        itemBuilder: (_, i) => _buildMessage(_messages[i]),
-                      ),
-                    ),
-                    if (_replyingTo != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        color: Colors.indigo.shade50,
-                        child: Row(
-                          children: [
-                            Container(width: 3, height: 36, color: Colors.indigo, margin: const EdgeInsets.only(right: 8)),
-                            Expanded(
+                        itemBuilder: (_, i) {
+                          final m = _messages[i];
+                          final isMe = m['user'] != 'Bot';
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              constraints: BoxConstraints(
+                                maxWidth: MediaQuery.of(context).size.width * 0.7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isMe ? Colors.indigo : Colors.grey[200],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.reply, size: 14, color: Colors.indigo),
-                                      const SizedBox(width: 4),
-                                      Text('Dang tra loi ${_replyingTo!.user}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.indigo)),
-                                    ],
-                                  ),
+                                  Text(m['user']!,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: isMe ? Colors.white70 : Colors.black54)),
                                   const SizedBox(height: 2),
-                                  Text(_replyingTo!.text, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                                  Text(m['text']!,
+                                      style: TextStyle(
+                                          color: isMe ? Colors.white : Colors.black87,
+                                          fontSize: 15)),
                                 ],
                               ),
                             ),
-                            IconButton(icon: const Icon(Icons.close, color: Colors.grey), onPressed: () => setState(() => _replyingTo = null)),
-                          ],
-                        ),
+                          );
+                        },
                       ),
+                    ),
                     SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.all(8),
@@ -359,7 +241,7 @@ jobs:
                               child: TextField(
                                 controller: _controller,
                                 decoration: InputDecoration(
-                                  hintText: _replyingTo != null ? 'Tra loi ${_replyingTo!.user}...' : 'Nhap tin nhan...',
+                                  hintText: 'Nhap tin nhan...',
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 ),
@@ -370,7 +252,9 @@ jobs:
                             CircleAvatar(
                               radius: 24,
                               backgroundColor: Colors.indigo,
-                              child: IconButton(icon: const Icon(Icons.send, color: Colors.white), onPressed: _send),
+                              child: IconButton(
+                                  icon: const Icon(Icons.send, color: Colors.white),
+                                  onPressed: _send),
                             ),
                           ],
                         ),
@@ -387,14 +271,6 @@ jobs:
         run: |
           cd chat_app_build
           sed -i 's|<application|<uses-permission android:name="android.permission.INTERNET"/>\n    <application|' android/app/src/main/AndroidManifest.xml
-
-      - name: Kiểm tra main.dart
-        run: |
-          cd chat_app_build
-          echo "=== 10 dong dau main.dart ==="
-          head -10 lib/main.dart
-          echo "=== Tong so dong ==="
-          wc -l lib/main.dart
 
       - name: Build APK
         run: |
