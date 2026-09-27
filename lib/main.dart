@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-// ⭐ CẤU HÌNH — ĐÃ ĐIỀN ĐẦY ĐỦ
+// ⭐ CẤU HÌNH
 const String FIREBASE_URL = 'https://chat-app-hung-default-rtdb.asia-southeast1.firebasedatabase.app';
 const String EMAILJS_SERVICE_ID = 'service_xd4p0og';
 const String EMAILJS_TEMPLATE_ID = 'template_e75vjj7';
@@ -32,10 +32,10 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _controller = TextEditingController();
-  final _nameController = TextEditingController(text: 'Khách');
+  final _nameController = TextEditingController(text: 'Khach');
   final _scrollController = ScrollController();
   final List<Map<String, String>> _messages = [
-    {'user': 'Bot', 'text': 'Gõ tin nhắn để gửi đến app "Nhận tin nhắn".'},
+    {'user': 'Bot', 'text': 'Go tin nhan de gui den app Nhan tin nhan.'},
   ];
 
   String _now() {
@@ -45,8 +45,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _guiFirebase(String ten, String noiDung) async {
     try {
+      final url = '$FIREBASE_URL/messages.json';
+      print('GUI DEN: $url');
       final r = await http.post(
-        Uri.parse('$FIREBASE_URL/messages.json'),
+        Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user': ten,
@@ -55,9 +57,15 @@ class _ChatScreenState extends State<ChatScreen> {
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         }),
       );
-      print(r.statusCode == 200 ? 'Da luu Firebase' : 'Loi Firebase: ${r.body}');
+      print('STATUS: ${r.statusCode}');
+      print('BODY: ${r.body}');
+      if (r.statusCode == 200) {
+        print('DA LUU FIREBASE OK');
+      } else {
+        print('LOI FIREBASE: ${r.body}');
+      }
     } catch (e) {
-      print('Loi: $e');
+      print('EXCEPTION: $e');
     }
   }
 
@@ -78,9 +86,9 @@ class _ChatScreenState extends State<ChatScreen> {
           },
         }),
       );
-      print(r.statusCode == 200 ? 'Da gui email' : 'Loi email: ${r.body}');
+      print(r.statusCode == 200 ? 'DA GUI EMAIL' : 'LOI EMAIL: ${r.body}');
     } catch (e) {
-      print('Loi: $e');
+      print('LOI EMAIL: $e');
     }
   }
 
@@ -98,7 +106,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     Future.delayed(const Duration(milliseconds: 500), () {
       setState(() {
-        _messages.add({'user': 'Bot', 'text': 'Da gui den app "Nhan tin nhan"'});
+        _messages.add({'user': 'Bot', 'text': 'Da gui den app Nhan tin nhan'});
       });
       _scrollToBottom();
     });
@@ -172,7 +180,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         const SizedBox(height: 2),
                         Text(m['text']!,
                             style: TextStyle(
-                                color: isMe ? Colors.white : Colors.black87, fontSize: 15)),
+                                color: isMe ? Colors.white : Colors.black87,
+                                fontSize: 15)),
                       ],
                     ),
                   ),
@@ -201,7 +210,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     radius: 24,
                     backgroundColor: Colors.indigo,
                     child: IconButton(
-                        icon: const Icon(Icons.send, color: Colors.white), onPressed: _send),
+                        icon: const Icon(Icons.send, color: Colors.white),
+                        onPressed: _send),
                   ),
                 ],
               ),
